@@ -14,7 +14,7 @@ public sealed class OutboxPublisherFunction(
     ILogger<OutboxPublisherFunction> logger)
 {
     [Function(nameof(OutboxPublisherFunction))]
-    public async Task Run([TimerTrigger("%Outbox__IntervalCron%")] TimerInfo timer, CancellationToken cancellationToken)
+    public async Task Run([TimerTrigger("%OutboxIntervalCron%")] TimerInfo timer, CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
         var options = outboxOptions.Value;
