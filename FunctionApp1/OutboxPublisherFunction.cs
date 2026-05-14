@@ -25,7 +25,7 @@ public sealed class OutboxPublisherFunction(
         if (messages.Count == 0)
             return;
 
-        logger.LogInformation("Claimed {Count} outbox message(s) for publishing.", messages.Count);
+        logger.LogInformation("Claimed {Count} outbox message(s) for publishing...", messages.Count);
 
         foreach (var message in messages)
         {
