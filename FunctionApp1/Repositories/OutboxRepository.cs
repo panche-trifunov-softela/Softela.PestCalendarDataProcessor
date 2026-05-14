@@ -1,6 +1,7 @@
 using System.Data;
 using Dapper;
 using Softela.PestCalendarDataProcessor.Data;
+using Softela.PestCalendarDataProcessor.Models;
 
 namespace Softela.PestCalendarDataProcessor.Repositories;
 
@@ -8,7 +9,7 @@ public sealed class OutboxRepository(IDapperDataContext dapperDataContext) : IOu
 {
     private readonly IDapperDataContext _dapperDataContext = dapperDataContext;
 
-    public async Task<List<dynamic>> GetUnprocessedAsync(int batchSize, DateTimeOffset now, TimeSpan stalenessWindow, CancellationToken cancellationToken = default)
+    public async Task<List<OutboxMessage>> GetUnprocessedAsync(int batchSize, DateTimeOffset now, TimeSpan stalenessWindow, CancellationToken cancellationToken = default)
     {
         var staleThreshold = now - stalenessWindow;
         var claimToken = Guid.NewGuid();
@@ -20,9 +21,7 @@ public sealed class OutboxRepository(IDapperDataContext dapperDataContext) : IOu
         parameters.Add("stale_threshold", staleThreshold, DbType.DateTimeOffset);
 
         const string sql = """
-            UPDATE OutboxMessages
-            SET ClaimedAt = @claimed_at, ClaimToken = @claim_token
-            WHERE Id IN (
+            WITH batch AS (
                 SELECT Id FROM OutboxMessages
                 WHERE ProcessedAt IS NULL
                   AND Error IS NULL
@@ -30,8 +29,15 @@ public sealed class OutboxRepository(IDapperDataContext dapperDataContext) : IOu
                 ORDER BY OccurredAt
                 LIMIT @batch_size
                 FOR UPDATE SKIP LOCKED
+            ),
+            updated AS (
+                UPDATE OutboxMessages
+                SET ClaimedAt = @claimed_at, ClaimToken = @claim_token
+                FROM batch
+                WHERE OutboxMessages.Id = batch.Id
+                RETURNING OutboxMessages.Id, EventType, Payload, OccurredAt, ClaimedAt, ClaimToken, ProcessedAt, Error
             )
-            RETURNING Id, EventType, Payload, OccurredAt, ClaimedAt, ClaimToken, ProcessedAt, Error
+            SELECT * FROM updated ORDER BY OccurredAt
             """;
 
         var command = new CommandDefinition(
@@ -42,7 +48,7 @@ public sealed class OutboxRepository(IDapperDataContext dapperDataContext) : IOu
             cancellationToken: cancellationToken
         );
 
-        var messages = await _dapperDataContext.Connection!.QueryAsync<dynamic>(command).ConfigureAwait(false);
+        var messages = await _dapperDataContext.Connection.QueryAsync<OutboxMessage>(command).ConfigureAwait(false);
         return messages.ToList();
     }
 
@@ -61,7 +67,7 @@ public sealed class OutboxRepository(IDapperDataContext dapperDataContext) : IOu
             cancellationToken: cancellationToken
         );
 
-        await _dapperDataContext.Connection!.ExecuteAsync(command).ConfigureAwait(false);
+        await _dapperDataContext.Connection.ExecuteAsync(command).ConfigureAwait(false);
     }
 
     public async Task MarkAsFailedAsync(long id, Guid claimToken, string error, CancellationToken cancellationToken = default)
@@ -79,6 +85,6 @@ public sealed class OutboxRepository(IDapperDataContext dapperDataContext) : IOu
             cancellationToken: cancellationToken
         );
 
-        await _dapperDataContext.Connection!.ExecuteAsync(command).ConfigureAwait(false);
+        await _dapperDataContext.Connection.ExecuteAsync(command).ConfigureAwait(false);
     }
 }

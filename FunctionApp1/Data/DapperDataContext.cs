@@ -3,22 +3,23 @@ using Npgsql;
 
 namespace Softela.PestCalendarDataProcessor.Data;
 
-public sealed class DapperDataContext : IDapperDataContext, IDisposable
+public sealed class DapperDataContext : IDapperDataContext, IAsyncDisposable
 {
     private readonly NpgsqlConnection _connection;
 
     public DapperDataContext(string connectionString)
     {
         _connection = new NpgsqlConnection(connectionString);
-        _connection.Open();
     }
 
-    public IDbConnection? Connection => _connection;
+    public IDbConnection Connection => _connection;
     public IDbTransaction? Transaction { get; set; }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        Transaction?.Dispose();
-        _connection.Dispose();
+        if (Transaction is not null)
+            await ((IAsyncDisposable)Transaction).DisposeAsync().ConfigureAwait(false);
+
+        await _connection.DisposeAsync().ConfigureAwait(false);
     }
 }
