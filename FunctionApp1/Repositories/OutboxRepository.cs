@@ -1,7 +1,6 @@
 using System.Data;
 using Dapper;
 using Softela.PestCalendarDataProcessor.Data;
-using Softela.PestCalendarDataProcessor.Models;
 
 namespace Softela.PestCalendarDataProcessor.Repositories;
 
@@ -9,7 +8,7 @@ public sealed class OutboxRepository(IDapperDataContext dapperDataContext) : IOu
 {
     private readonly IDapperDataContext _dapperDataContext = dapperDataContext;
 
-    public async Task<List<OutboxMessage>> GetUnprocessedAsync(int batchSize, DateTimeOffset now, TimeSpan stalenessWindow, CancellationToken cancellationToken = default)
+    public async Task<List<dynamic>> GetUnprocessedAsync(int batchSize, DateTimeOffset now, TimeSpan stalenessWindow, CancellationToken cancellationToken = default)
     {
         var staleThreshold = now - stalenessWindow;
         var claimToken = Guid.NewGuid();
@@ -43,7 +42,7 @@ public sealed class OutboxRepository(IDapperDataContext dapperDataContext) : IOu
             cancellationToken: cancellationToken
         );
 
-        var messages = await _dapperDataContext.Connection!.QueryAsync<OutboxMessage>(command).ConfigureAwait(false);
+        var messages = await _dapperDataContext.Connection!.QueryAsync<dynamic>(command).ConfigureAwait(false);
         return messages.ToList();
     }
 

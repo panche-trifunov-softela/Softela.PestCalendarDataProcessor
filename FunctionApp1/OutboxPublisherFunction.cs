@@ -31,22 +31,22 @@ public sealed class OutboxPublisherFunction(
         {
             try
             {
-                var sbMessage = new ServiceBusMessage(message.Payload)
+                var sbMessage = new ServiceBusMessage((string)message.Payload)
                 {
-                    MessageId = message.Id.ToString(),
-                    Subject = message.EventType,
+                    MessageId = ((long)message.Id).ToString(),
+                    Subject = (string)message.EventType,
                     ContentType = "application/json"
                 };
 
                 await sender.SendMessageAsync(sbMessage, cancellationToken);
-                await outboxRepository.MarkAsProcessedAsync(message.Id, message.ClaimToken!.Value, now, cancellationToken);
+                await outboxRepository.MarkAsProcessedAsync((long)message.Id, (Guid)message.ClaimToken, now, cancellationToken);
 
-                logger.LogInformation("Published outbox message {Id} ({EventType}).", message.Id, message.EventType);
+                logger.LogInformation("Published outbox message {Id} ({EventType}).", (long)message.Id, (string)message.EventType);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                logger.LogError(ex, "Failed to publish outbox message {Id} ({EventType}).", message.Id, message.EventType);
-                await outboxRepository.MarkAsFailedAsync(message.Id, message.ClaimToken!.Value, ex.Message, cancellationToken);
+                logger.LogError(ex, "Failed to publish outbox message {Id} ({EventType}).", (long)message.Id, (string)message.EventType);
+                await outboxRepository.MarkAsFailedAsync((long)message.Id, (Guid)message.ClaimToken, ex.Message, cancellationToken);
             }
         }
     }
