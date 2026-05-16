@@ -1,9 +1,12 @@
 using Azure.Messaging.ServiceBus;
+using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Softela.PestCalendarDataProcessor.Data;
 using Softela.PestCalendarDataProcessor.Options;
 using Softela.PestCalendarDataProcessor.Repositories;
+
+DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
