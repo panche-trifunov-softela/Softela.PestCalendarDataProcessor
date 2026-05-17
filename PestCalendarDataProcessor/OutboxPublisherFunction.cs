@@ -19,12 +19,15 @@ public sealed class OutboxPublisherFunction(
     {
         var now = DateTimeOffset.UtcNow;
         var options = outboxOptions.Value;
-        var stalenessWindow = TimeSpan.FromMinutes(options.StalenessWindowMinutes);
+        var stalenessWindow = TimeSpan.FromMinutes(0);
 
         var messages = await outboxRepository.GetUnprocessedAsync(options.BatchSize, now, stalenessWindow, cancellationToken);
 
         if (messages.Count == 0)
+        {
+            logger.LogInformation("OutboxPublisherFunction executed with no messages to process.");
             return;
+        }
 
         logger.LogInformation("Claimed {Count} outbox message(s) for publishing...", messages.Count);
 

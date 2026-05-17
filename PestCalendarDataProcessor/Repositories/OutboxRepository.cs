@@ -22,22 +22,22 @@ public sealed class OutboxRepository(IDapperDataContext dapperDataContext) : IOu
 
         const string sql = """
             WITH batch AS (
-                SELECT id FROM outbox_messages
-                WHERE processed_at IS NULL
+                SELECT id FROM outboxmessages
+                WHERE processedat IS NULL
                   AND error IS NULL
-                  AND (claimed_at IS NULL OR claimed_at < @stale_threshold)
-                ORDER BY occurred_at
-                LIMIT @batch_size
+                  AND (claimedat IS NULL OR claimedat < :stale_threshold)
+                ORDER BY occurredat
+                LIMIT :batch_size
                 FOR UPDATE SKIP LOCKED
             ),
             updated AS (
-                UPDATE outbox_messages
-                SET claimed_at = @claimed_at, claim_token = @claim_token
+                UPDATE outboxmessages
+                SET claimedat = :claimed_at, claimtoken = :claim_token
                 FROM batch
-                WHERE outbox_messages.id = batch.id
-                RETURNING outbox_messages.id, event_type, payload, occurred_at, claimed_at, claim_token, processed_at, error
+                WHERE outboxmessages.id = batch.id
+                RETURNING outboxmessages.id, eventtype, payload, occurredat, claimedat, claimtoken, processedat, error
             )
-            SELECT * FROM updated ORDER BY occurred_at
+            SELECT * FROM updated ORDER BY occurredat
             """;
 
         var command = new CommandDefinition(
@@ -60,7 +60,7 @@ public sealed class OutboxRepository(IDapperDataContext dapperDataContext) : IOu
         parameters.Add("p_processed_at", processedAt, DbType.DateTimeOffset);
 
         var command = new CommandDefinition(
-            commandText: "UPDATE outbox_messages SET processed_at = @p_processed_at WHERE id = @p_id AND claim_token = @p_claim_token",
+            commandText: "UPDATE outboxmessages SET processedat = :p_processed_at WHERE id = :p_id AND claimtoken = :p_claim_token",
             parameters: parameters,
             transaction: _dapperDataContext.Transaction,
             commandType: CommandType.Text,
@@ -78,7 +78,7 @@ public sealed class OutboxRepository(IDapperDataContext dapperDataContext) : IOu
         parameters.Add("p_error", error, DbType.String);
 
         var command = new CommandDefinition(
-            commandText: "UPDATE outbox_messages SET error = @p_error WHERE id = @p_id AND claim_token = @p_claim_token",
+            commandText: "UPDATE outboxmessages SET error = :p_error WHERE id = :p_id AND claimtoken = :p_claim_token",
             parameters: parameters,
             transaction: _dapperDataContext.Transaction,
             commandType: CommandType.Text,
