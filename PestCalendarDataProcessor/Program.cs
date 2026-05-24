@@ -24,11 +24,11 @@ var host = new HostBuilder()
         // Service Bus sender
         var serviceBusConnectionString = cfg["ServiceBus:ConnectionString"]
             ?? throw new InvalidOperationException("ServiceBus:ConnectionString is not configured.");
-        var topicName = cfg["ServiceBus:TopicName"]
-            ?? throw new InvalidOperationException("ServiceBus:TopicName is not configured.");
+        var queueName = cfg["ServiceBus:QueueName"]
+            ?? throw new InvalidOperationException("ServiceBus:QueueName is not configured.");
 
         services.AddSingleton(_ => new ServiceBusClient(serviceBusConnectionString));
-        services.AddSingleton(sp => sp.GetRequiredService<ServiceBusClient>().CreateSender(topicName));
+        services.AddSingleton(sp => sp.GetRequiredService<ServiceBusClient>().CreateSender(queueName));
 
         // Outbox options
         services.Configure<OutboxOptions>(cfg.GetSection("Outbox"));
